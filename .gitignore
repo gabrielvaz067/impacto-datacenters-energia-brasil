@@ -21,12 +21,3 @@ data/snapshots/
 data/.publicacoes/
 pacotes/
 execucoes/
-
-# Relatorios internos de auditoria e preparacao
-/AUDITORIA_PROJETO.md
-/AUDITORIA_FINAL.md
-/VALIDACAO_ETAPA*.md
-/VALIDACAO_ODBL_SIGA.md
-/PREPARACAO_PUBLICACAO.md
-/LIBERACAO_GITHUB.md
-/PRE_COMMIT_GITHUB.md
