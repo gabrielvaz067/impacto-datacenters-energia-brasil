@@ -1,0 +1,15 @@
+{
+  "carga_anos": [2024, 2025, 2026],
+  "carga_ultima_data": "2026-11-06",
+  "geracao_competencias": ["2026-09", "2026-10", "2026-11"],
+  "geracao_ultima_data": "2026-11-08T23:00:00",
+  "aneel_referencia": "2026-11-09",
+  "epe_versao": "consulta_publica_2026",
+  "analise_publicada": {
+    "carga_comparavel": "janeiro-outubro de 2024, 2025 e 2026",
+    "geracao_comparavel": ["2026-09", "2026-10"],
+    "geracao_diagnostico_parcial": "2026-11",
+    "aneel_fotografia": "2026-11-09",
+    "epe": "PDE 2036, consulta pública de 2026; CSV de curadoria preservado"
+  }
+}
