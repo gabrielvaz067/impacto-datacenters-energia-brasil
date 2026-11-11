@@ -6,6 +6,8 @@
 
 **Objetivo geral:** Analisar a evolução da demanda elétrica brasileira, a infraestrutura de geração cadastrada e as projeções de consumo dos data centers até 2036, quantificando a magnitude do crescimento esperado e discutindo suas implicações para o planejamento energético.
 
+[Repositório no GitHub](https://github.com/gabrielvaz067/impacto-datacenters-energia-brasil)
+
 ## 1. Resumo executivo
 
 No cenário de referência da EPE, o consumo anual dos data centers de grande porte abrangidos pelo estudo passa de **3 TWh em 2026 para 30 TWh em 2036**: aumento de **27 TWh/ano**, ou **900%**. Os 30 TWh correspondem a **3,06%** dos 979 TWh de consumo total de eletricidade projetado para 2036. O incremento dos data centers equivale a **9,75%** dos 277 TWh/ano de aumento projetado para o consumo total; é uma comparação de magnitudes, não uma estimativa causal.
@@ -16,7 +18,75 @@ O recorte EPE não se limita à inteligência artificial. A análise não estima
 
 **Em poucos minutos:** ONS fornece carga e geração; ANEEL, o cadastro de capacidade; e EPE, as projeções. O pipeline usa Python, Pandas e PyArrow para percorrer Raw → Processed/Silver → Gold, além de uma referência EPE curada. DuckDB, SQL e Jupyter apoiam a análise. Explore os [notebooks](notebooks/), [pipelines](src/) e [consultas](sql/); execute os [testes e a demonstração sintética](#testes-e-demonstração-sintética-sem-snapshots). A edição histórica é reproduzível com os objetos locais, mas **ainda não está disponível publicamente**; dados atuais podem ser revisados e têm outro recorte. Veja [como executar](#7-como-executar) e [dados e licenças](DADOS_E_LICENCAS.md).
 
-## 2. Fontes e rastreabilidade
+## 2. Principais resultados
+
+### 2.1. Infraestrutura cadastrada
+
+A ANEEL registrou **221,56 GW** fiscalizados em operação e **93,48 GW** outorgados em projetos não operacionais, dos quais **84,64 GW** ainda não haviam iniciado construção. A entrada dos projetos não é garantida.
+
+O gráfico contém informações do [SIGA/ANEEL](https://dadosabertos.aneel.gov.br/dataset/siga-sistema-de-informacoes-de-geracao-da-aneel), disponibilizado sob a [ODbL](https://opendatacommons.org/licenses/odbl/1-0/); os registros foram validados, deduplicados e agregados neste projeto.
+
+![Capacidade fiscalizada em operação por fonte](images/09_capacidade_por_fonte.png)
+
+### 2.2. Perfil horário selecionado
+
+O recorte ONS de setembro–outubro de 2026 mostra perfis distintos entre as quatro fontes selecionadas; a térmica tem ausências e a nuclear está fora da análise.
+
+![Perfil horário do recorte de geração](images/13_perfil_horario_geracao.png)
+
+A correlação hidrelétrica ajustada pelo dia da semana varia de **0,829 em setembro** para **0,566 em outubro**; a eólica ajustada passa de aproximadamente **−0,057** para **−0,177**. Essa sensibilidade limita generalizações e não identifica causalidade.
+
+### 2.3. Projeção dos data centers
+
+Na referência EPE, 3 TWh em 2026 e 30 TWh em 2036 representam, respectivamente, **0,43% e 3,06%** do consumo total de eletricidade da EPE. O denominador de 3,06% não é a carga do SIN.
+
+![Projeção EPE dos data centers](images/18_projecao_datacenters_2036.png)
+
+### 2.4. Parcela do crescimento projetado
+
+O incremento de **27 TWh/ano** no recorte de data centers corresponde a **9,75%** do aumento projetado de **277 TWh/ano** no consumo total entre 2026 e 2036.
+
+![Participação no crescimento projetado](images/20_participacao_crescimento_demanda.png)
+
+### 2.5. Sensibilidade para 2036
+
+| Cenário | Consumo anual | Potência média equivalente civil |
+|---|---:|---:|
+| Baixa demanda | 15 TWh | 1,71 GWmed |
+| Referência EPE | 30 TWh | 3,42 GWmed |
+| Alta demanda | 45 TWh | 5,12 GWmed |
+
+![Cenários ilustrativos de consumo em 2036](images/21_cenarios_demanda_2036.png)
+
+## 3. Arquitetura e tecnologias
+
+```mermaid
+flowchart LR
+    ONS["ONS: carga e geração"] --> EXT["Extração e ingestão"]
+    ANEEL["ANEEL: SIGA"] --> EXT
+    EXT --> RAW["Raw: arquivos de origem"]
+    RAW --> PROC["Processed: carga ONS"]
+    PROC --> SILVER["Silver: dados tratados"]
+    RAW -->|"ANEEL e geração ONS"| SILVER
+    SILVER --> GOLD["Gold: agregações"]
+    EPE["EPE: PDE 2036"] --> CUR["Curadoria manual"]
+    CUR --> REF["Referência EPE"]
+    SILVER --> NB["Cinco notebooks"]
+    GOLD --> NB
+    REF --> NB
+    NB --> IMG["21 gráficos"]
+    Q["Qualidade: validações e testes"] -.-> EXT
+    Q -.-> SILVER
+    Q -.-> GOLD
+```
+
+As extrações consultam as fontes públicas; a curadoria EPE é definida manualmente e gerada pelo script do projeto. As validações acompanham a ingestão e as transformações. As camadas de dados são geradas localmente e não integram o repositório público.
+
+### Tecnologias utilizadas
+
+Python, Pandas, PyArrow/Parquet, DuckDB, Matplotlib, Requests e Jupyter. As camadas Raw, Processed, Silver e Gold organizam a extração, validação e agregação; os dados EPE são uma referência curada manualmente.
+
+## 4. Fontes e rastreabilidade
 
 | Fonte | Evidência e utilização |
 |---|---|
@@ -35,19 +105,15 @@ O código Python, as consultas SQL e os testes **autorais** deste projeto são l
 
 Na EPE, a [Tabela 2-4 do Relatório Síntese, p. 59](https://www.epe.gov.br/sites-pt/publicacoes-dados-abertos/publicacoes/PublicacoesArquivos/publicacao-982/topico-860/PDE%202036_Relat%C3%B3rio%20S%C3%ADntese_rev3_2026-10-08.pdf#page=59) apresenta 702/979 TWh de consumo total; a Figura 2-12, p. 60, apresenta o recorte de grandes cargas. O [Caderno de Demanda de Energia](https://www.epe.gov.br/sites-pt/publicacoes-dados-abertos/publicacoes/PublicacoesArquivos/publicacao-982/topico-851/PDE%202036_Caderno%20de%20Demanda%20de%20Energia_v1_2026-10-27.pdf) traz o perímetro do consumo total na p. 11 e o contexto dos data centers na p. 36. A verificação das referências foi realizada em 10/11/2026; não se atribui essa data à consulta histórica original. O CSV de curadoria registra documento, versão, páginas, definição, perímetro e natureza dos dados.
 
-## 3. Tecnologias utilizadas
+## 5. Metodologia
 
-Python, Pandas, PyArrow/Parquet, DuckDB, Matplotlib, Requests e Jupyter. As camadas Raw, Processed, Silver e Gold organizam a extração, validação e agregação; os dados EPE são uma referência curada manualmente.
-
-## 4. Metodologia
-
-### 4.1. Carga e capacidade
+### 5.1. Carga e capacidade
 
 A série histórica de carga publicada pelo ONS combina dados operacionais e componentes estimados, incluindo previsão de geração de pequenas usinas e, desde 29/04/2023, MMGD estimada. Ela não é diretamente equivalente ao consumo total de eletricidade da EPE, que inclui autoprodução não injetada e consumo interno das usinas. Para o agregado nacional, somam-se os quatro subsistemas; médias entre períodos são ponderadas pela duração. Meses incompletos são identificados e excluídos das comparações mensais completas.
 
 A ANEEL fornece uma fotografia cadastral. Empreendimentos com CEG redundante são deduplicados apenas após conferir atributos essenciais; potência fiscalizada operacional e potência outorgada de projetos são apresentadas separadamente.
 
-### 4.2. Geração horária e estatística
+### 5.2. Geração horária e estatística
 
 Em setembro–outubro de 2026, os gráficos e correlações usam TIPO I e Conjunto de Usinas nas fontes hidrelétrica, térmica, eólica e solar. O ONS informa que conjuntos reúnem usinas Tipo II-C e grupos de pequenas usinas Tipo III têm geração prevista; o recorte evita somar conjuntamente modalidades individuais excluídas e seus conjuntos, sem comprovar por si só ausência de sobreposição. II-A, II-B, II-C individuais, Tipo III e MMGD ficam fora, assim como a nuclear. O recorte não é a geração nacional completa nem um balanço energético.
 
@@ -55,53 +121,13 @@ Existem 1.464 registros térmicos ausentes no recorte analisado. A soma térmica
 
 As correlações de Pearson são exploratórias. O ajuste por dia da semana remove a média de cada dia da semana das séries antes de correlacionar os resíduos; não controla clima, tendência, despacho ou feriados. As amostras de 30, 31 e 61 dias podem ter dependência temporal e variáveis omitidas. Os resultados não estabelecem causalidade ou significância estatística. Segunda–sexta não é identificada como dia útil, pois não há calendário de feriados.
 
-### 4.3. Energia anual e cenários
+### 5.3. Energia anual e cenários
 
 Potência média equivalente é energia anual dividida pelas horas do ano civil: **8.760 em 2026** e **8.784 em 2036**. Assim, 30 TWh/ano em 2036 equivalem a aproximadamente **3,4153 GWmed**, não a potência de pico. O Caderno da EPE também emprega uma conversão convencional de 8.760 horas: ela serve para reproduzir aquela convenção, enquanto este projeto usa o ano civil. Os cenários de 15 e 45 TWh são hipóteses ilustrativas, não projeções adicionais da EPE.
 
-## 5. Principais resultados
-
-### 5.1. Infraestrutura cadastrada
-
-A ANEEL registrou **221,56 GW** fiscalizados em operação e **93,48 GW** outorgados em projetos não operacionais, dos quais **84,64 GW** ainda não haviam iniciado construção. A entrada dos projetos não é garantida.
-
-O gráfico contém informações do [SIGA/ANEEL](https://dadosabertos.aneel.gov.br/dataset/siga-sistema-de-informacoes-de-geracao-da-aneel), disponibilizado sob a [ODbL](https://opendatacommons.org/licenses/odbl/1-0/); os registros foram validados, deduplicados e agregados neste projeto.
-
-![Capacidade fiscalizada em operação por fonte](images/09_capacidade_por_fonte.png)
-
-### 5.2. Perfil horário selecionado
-
-O recorte ONS de setembro–outubro de 2026 mostra perfis distintos entre as quatro fontes selecionadas; a térmica tem ausências e a nuclear está fora da análise.
-
-![Perfil horário do recorte de geração](images/13_perfil_horario_geracao.png)
-
-A correlação hidrelétrica ajustada pelo dia da semana varia de **0,829 em setembro** para **0,566 em outubro**; a eólica ajustada passa de aproximadamente **−0,057** para **−0,177**. Essa sensibilidade limita generalizações e não identifica causalidade.
-
-### 5.3. Projeção dos data centers
-
-Na referência EPE, 3 TWh em 2026 e 30 TWh em 2036 representam, respectivamente, **0,43% e 3,06%** do consumo total de eletricidade da EPE. O denominador de 3,06% não é a carga do SIN.
-
-![Projeção EPE dos data centers](images/18_projecao_datacenters_2036.png)
-
-### 5.4. Parcela do crescimento projetado
-
-O incremento de **27 TWh/ano** no recorte de data centers corresponde a **9,75%** do aumento projetado de **277 TWh/ano** no consumo total entre 2026 e 2036.
-
-![Participação no crescimento projetado](images/20_participacao_crescimento_demanda.png)
-
-### 5.5. Sensibilidade para 2036
-
-| Cenário | Consumo anual | Potência média equivalente civil |
-|---|---:|---:|
-| Baixa demanda | 15 TWh | 1,71 GWmed |
-| Referência EPE | 30 TWh | 3,42 GWmed |
-| Alta demanda | 45 TWh | 5,12 GWmed |
-
-![Cenários ilustrativos de consumo em 2036](images/21_cenarios_demanda_2036.png)
-
 ## 6. Estrutura do projeto
 
-`data/` contém insumos, referências e camadas analíticas; `src/` contém extrações, transformações e ferramentas de edição; `notebooks/` contém cinco análises; `sql/` reúne consultas; `images/` contém 21 figuras; `edicoes/` registra manifestos e `tests/` contém a suíte automatizada. Os dados históricos preservados e os pacotes não são incluídos automaticamente no Git.
+`data/` contém insumos, referências e camadas analíticas; `src/` contém extrações, transformações e ferramentas de edição; `notebooks/` contém cinco análises; `sql/` reúne consultas; `images/` contém 21 figuras; `edicoes/` registra manifestos e `tests/` contém a suíte automatizada. Os datasets históricos, snapshots privados e pacotes não são distribuídos no repositório público.
 
 ## 7. Como executar
 
@@ -117,7 +143,7 @@ python -m pip install -r requirements.txt
 
 Em Linux/macOS, use `python3.14 -m venv .venv` e `source .venv/bin/activate`. Se a política do PowerShell impedir a ativação, utilize `.\.venv\Scripts\python.exe` no lugar de `python`, sem alterar a política do sistema.
 
-Raw, Processed, Silver, Gold, a referência local, controles operacionais, snapshots e pacotes são ignorados pelo Git. O código, os notebooks, as imagens e a documentação são candidatos à inclusão após revisão; nesta cópia, eles ainda não estão automaticamente disponíveis em um clone. Para recriar localmente a referência EPE curada, execute `python src/ingestao_epe.py`. Ela contém indicadores dos documentos oficiais e permanece sujeita à revisão de uso descrita em [Dados e licenças](DADOS_E_LICENCAS.md).
+O repositório público contém código, cinco notebooks, 21 gráficos, testes e documentação. Raw, Processed, Silver, Gold, a referência local, controles operacionais, snapshots privados e pacotes históricos não são distribuídos no repositório e são ignorados pelo Git. Para recriar localmente a referência EPE curada, execute `python src/ingestao_epe.py`. Ela contém indicadores dos documentos oficiais e permanece sujeita à revisão de uso descrita em [Dados e licenças](DADOS_E_LICENCAS.md).
 
 ### Testes e demonstração sintética sem snapshots
 
@@ -159,13 +185,16 @@ python src/ingestao_epe.py
 
 A EPE é uma curadoria manual fixa dos documentos de 2026, não um download ou atualização automática. As extrações atuais podem conter revisões, meses parciais ou períodos indisponíveis; resultados e gráficos podem diferir da fotografia histórica. Os notebooks têm recortes analíticos específicos: confira os períodos necessários antes de executá-los na ordem 01–05 pela raiz com `python -m notebook`. O notebook 05 gera a síntese. Essa execução não cria nem recupera uma edição histórica.
 
+<details>
+<summary>Operações históricas e avançadas</summary>
+
 ### Reproduzir a edição histórica local
 
 A edição `2026-11-09` está definida em `edicoes/2026-11-09.json`, com o recorte de `config/edicao_2026-11-09.json`: carga de 2024–2026 até 06/11/2026; geração de setembro/outubro e novembro parcial até 08/11; fotografia ANEEL de 09/11/2026; CSV EPE da consulta pública de 2026. Os bytes preservados, incluindo scripts, notebooks, SQL e dependências declaradas, ficam em `data/snapshots/sha256/`, fora do Git.
 
-**Distribuição pública pendente:** o pacote histórico ainda não está hospedado publicamente. Um clone sem os snapshots não reproduz a edição sozinho. O manifesto permite conferir o pacote quando ele for disponibilizado; baixar os arquivos atuais das fontes não recupera necessariamente a fotografia antiga.
+**Pacote histórico privado:** o pacote histórico não é distribuído no repositório público. Um clone sem os snapshots não reproduz a edição sozinho. O manifesto permite conferir o pacote quando ele for disponibilizado; baixar os arquivos atuais das fontes não recupera necessariamente a fotografia antiga.
 
-A edição `2026-11-09` preserva os dados, scripts e notebooks daquela fotografia. Seu notebook 02 divide a energia projetada de 2036 por **8.760 horas**; a versão analítica atual usa **8.784 horas**, correspondentes ao ano civil bissexto. Reproduzir a edição histórica não é reproduzir identicamente a versão editorial atual. Para uma futura edição atualizada, defina outro identificador, preserve seus insumos e código, gere manifesto e hashes próprios e valide os resultados; não substitua nem altere a edição de 2026-11-09. Nenhuma nova edição foi criada nesta etapa.
+A edição `2026-11-09` preserva os dados, scripts e notebooks daquela fotografia. Seu notebook 02 divide a energia projetada de 2036 por **8.760 horas**; a versão analítica atual usa **8.784 horas**, correspondentes ao ano civil bissexto. Reproduzir a edição histórica não é reproduzir identicamente a versão editorial atual. Para uma futura edição atualizada, defina outro identificador, preserve seus insumos e código, gere manifesto e hashes próprios e valide os resultados; não substitua nem altere a edição de 2026-11-09. Esse procedimento não cria uma nova edição automaticamente.
 
 Com o armazenamento local disponível:
 
@@ -252,7 +281,7 @@ New-Item -ItemType Directory -Force pacotes
 python src/edicoes.py exportar --manifesto edicoes/2026-11-09.json --armazenamento execucoes/objetos-importados --pacote pacotes/2026-11-09-copia-local.zip
 ```
 
-Se os objetos históricos não estiverem no armazenamento, recupere-os por um pacote ou cópia autorizada e verificável quando disponível; consultar os portais atuais não garante recuperar os bytes antigos. `--armazenamento CAMINHO` escolhe o repositório de objetos. O ZIP inclui o manifesto e os objetos por hash; a importação exige igualdade com o manifesto fornecido separadamente e verifica todos os objetos. `data/snapshots/`, `pacotes/` e `execucoes/` são ignorados pelo Git. O pacote histórico local contém insumos de terceiros e notebooks arquivados com caminhos pessoais; sua distribuição ainda requer revisão. Não houve publicação ou upload automático.
+Se os objetos históricos não estiverem no armazenamento, recupere-os por um pacote ou cópia autorizada e verificável quando disponível; consultar os portais atuais não garante recuperar os bytes antigos. `--armazenamento CAMINHO` escolhe o repositório de objetos. O ZIP inclui o manifesto e os objetos por hash; a importação exige igualdade com o manifesto fornecido separadamente e verifica todos os objetos. `data/snapshots/`, `pacotes/` e `execucoes/` são ignorados pelo Git. O pacote histórico local contém insumos de terceiros e notebooks arquivados com caminhos pessoais; sua distribuição ainda requer revisão. Esses comandos não publicam nem enviam o pacote automaticamente.
 
 Testes automatizados offline, sempre em diretórios temporários:
 
@@ -293,6 +322,8 @@ A recuperação destina-se a interrupções de processo e falhas de escrita em s
 
 As limitações de acesso e reprodução estão descritas em [Dados e licenças](DADOS_E_LICENCAS.md).
 
+</details>
+
 ## 8. Limitações
 
 - As projeções EPE são condicionadas a premissas e tratam o recorte de grandes cargas/data centers de grande porte, não exclusivamente IA.
@@ -302,7 +333,7 @@ As limitações de acesso e reprodução estão descritas em [Dados e licenças]
 - Geração e correlações cobrem setembro–outubro de 2026, com nuclear excluída, térmica incompleta e universo de usinas não certificado.
 - Há dependência temporal potencial, variáveis omitidas e ausência de identificação causal ou teste de significância.
 - Os cenários alternativos são hipóteses ilustrativas, não estudo de adequação.
-- A distribuição pública do pacote histórico segue pendente; não é substituída por um caminho local.
+- O pacote histórico não é distribuído publicamente; um caminho local não o torna acessível a terceiros.
 
 ## 9. Conclusão
 
