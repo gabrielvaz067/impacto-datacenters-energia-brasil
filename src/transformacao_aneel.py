@@ -10,7 +10,7 @@ except ModuleNotFoundError:
     from src.publicacao import Publicacao
 
 
-# 1. CONFIGURAÇÕES
+# Configurações da transformação
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 RAW_FILE = (
@@ -52,7 +52,7 @@ ATRIBUTOS_ESSENCIAIS = [
 ]
 
 
-# 2. FUNÇÕES AUXILIARES
+# Funções de apoio
 def converter_decimal_br(serie):
     """Converte números brasileiros para formato numérico."""
 
@@ -91,7 +91,7 @@ def salvar_parquet(df, destino):
             temporario.unlink(missing_ok=True)
 
 
-# 3. TRATAMENTO DE DUPLICIDADES
+# Conferência de CEGs repetidos
 def tratar_duplicidades(df):
     """Remove apenas CEGs equivalentes para a análise."""
 
@@ -115,7 +115,7 @@ def tratar_duplicidades(df):
         duplicados["cod_ceg"].nunique()
     )
 
-    # Detectar divergências nos atributos essenciais
+    # Confiro os campos principais antes de considerar dois registros equivalentes.
     divergencias = (
         duplicados
         .groupby("cod_ceg")[ATRIBUTOS_ESSENCIAIS]
@@ -135,7 +135,7 @@ def tratar_duplicidades(df):
             "É necessária investigação manual."
         )
 
-    # Deduplicação após verificar equivalência
+    # Removo repetições somente depois da conferência.
     quantidade_antes = len(df)
 
     df = df.drop_duplicates(
@@ -152,7 +152,7 @@ def tratar_duplicidades(df):
     return df
 
 
-# 4. CAMADA SILVER
+# Preparação da camada Silver
 def criar_silver(destino=None):
 
     print("\n=== CAMADA SILVER ===")
@@ -171,7 +171,7 @@ def criar_silver(destino=None):
 
     print(f"Registros originais: {len(df):,}")
 
-    # Verificar schema
+    # Confiro as colunas necessárias.
     faltantes = set(COLUNAS) - set(df.columns)
 
     if faltantes:
@@ -183,14 +183,14 @@ def criar_silver(destino=None):
         columns=COLUNAS
     ).copy()
 
-    # Padronização de identificadores
+    # Padronizo os identificadores.
     df["cod_ceg"] = (
         df["cod_ceg"]
         .astype("string")
         .str.strip()
     )
 
-    # Conversão das potências
+    # Converto os campos de potência para números.
     df["potencia_fiscalizada_kw"] = pd.to_numeric(
         df["potencia_fiscalizada_kw"],
         errors="coerce"
@@ -202,7 +202,7 @@ def criar_silver(destino=None):
         )
     )
 
-    # Validação antes da deduplicação
+    # Valido os valores antes de tratar registros repetidos.
     if df["cod_ceg"].isna().any() or df["cod_ceg"].eq("").any():
         raise ValueError("Existem códigos CEG ausentes.")
 
@@ -224,16 +224,16 @@ def criar_silver(destino=None):
                 f"Potência negativa encontrada: {coluna}"
             )
 
-    # Tratar códigos CEG repetidos
+    # Trato os CEGs repetidos.
     df = tratar_duplicidades(df)
 
-    # Validar unicidade
+    # Confiro se cada CEG ficou único.
     if df["cod_ceg"].duplicated().any():
         raise ValueError(
             "Ainda existem CEGs duplicados."
         )
 
-    # Datas
+    # Trato as datas.
     for coluna in ["data_operacao", "data_referencia"]:
         df[coluna] = pd.to_datetime(
             df[coluna],
@@ -247,7 +247,7 @@ def criar_silver(destino=None):
     if df["data_referencia"].dt.normalize().nunique() != 1:
         raise ValueError("Fotografia ANEEL contém datas de referência diferentes.")
 
-    # Converter kW para MW
+    # Converto a potência de kW para MW.
     df["potencia_fiscalizada_mw"] = (
         df["potencia_fiscalizada_kw"] / 1000
     )
@@ -256,7 +256,7 @@ def criar_silver(destino=None):
         df["potencia_outorgada_kw"] / 1000
     )
 
-    # Identificação operacional
+    # Identifico quais empreendimentos estão em operação.
     df["em_operacao"] = df["fase"].eq("Operação")
 
     df = df.sort_values(
@@ -273,12 +273,12 @@ def criar_silver(destino=None):
     return df
 
 
-# 5. GOLD — CAPACIDADE POR FONTE
+# Capacidade em operação por fonte
 def criar_gold_fontes(df, destino=None):
 
     print("\n=== GOLD: CAPACIDADE POR FONTE ===")
 
-    # Apenas empreendimentos em operação
+    # Considero somente as usinas em operação.
     operacao = df[df["em_operacao"]].copy()
 
     gold = (
@@ -323,15 +323,15 @@ def criar_gold_fontes(df, destino=None):
     return gold
 
 
-# 6. GOLD — CAPACIDADE POR ESTADO E FASE
+# Capacidade por estado e situação do empreendimento
 def criar_gold_estados(df, destino=None):
 
     print("\n=== GOLD: CAPACIDADE POR ESTADO ===")
 
     base = df.copy()
 
-    # Fases diferentes usam métricas diferentes.
-    # Nunca somar como capacidade operacional única.
+    # Cada fase do empreendimento usa sua medida de potência.
+    # Não junto potência outorgada e fiscalizada como se ambas estivessem disponíveis.
     base["potencia_analise_mw"] = (
         base["potencia_outorgada_mw"]
     )
@@ -370,7 +370,7 @@ def criar_gold_estados(df, destino=None):
     return gold
 
 
-# 7. RESUMO DE QUALIDADE
+# Resumo das verificações de qualidade
 def exibir_resumo(silver, gold_fontes):
 
     print("\n" + "=" * 50)
@@ -424,7 +424,7 @@ def exibir_resumo(silver, gold_fontes):
     )
 
 
-# 8. EXECUÇÃO PRINCIPAL
+# Execução da transformação
 def main():
 
     print("=" * 50)
