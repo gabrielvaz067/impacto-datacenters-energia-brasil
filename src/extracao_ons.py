@@ -1,4 +1,4 @@
-"""Extrai a carga diária do ONS e prepara os Parquets anuais de entrada."""
+"""Baixa a carga diária do ONS e prepara os arquivos anuais em Parquet."""
 
 import argparse
 from datetime import datetime, timezone
@@ -35,7 +35,7 @@ TIMEOUT = (15, 90)
 
 
 def validar_url(url: str) -> str:
-    """Aceita recursos HTTPS nos hosts oficiais usados pelo catálogo ONS."""
+    """Confere se o endereço HTTPS pertence a um dos servidores esperados do ONS."""
     partes = urlparse(url)
     hosts = {
         "dados.ons.org.br",
@@ -101,7 +101,7 @@ def sha256(caminho: Path) -> str:
 
 
 def ler_carga(caminho: Path, ano: int) -> pd.DataFrame:
-    """Valida o contrato diário sem agregar, imputar ou remover duplicatas."""
+    """Confere os registros diários sem alterar valores nem descartar duplicatas."""
     df = pd.read_csv(caminho, sep=";", encoding="utf-8-sig")
     faltantes = set(COLUNAS) - set(df.columns)
     if faltantes or df.empty:
@@ -172,7 +172,7 @@ def atualizar_ano(sessao: requests.Session, ano: int, url: str,
     anterior = estado.get(str(ano), {})
     hash_local = sha256(raw) if raw.exists() else None
     headers = {}
-    # Controle legado sem SHA exige download incondicional antes da migração.
+    # Se o controle antigo não tiver hash, baixo o arquivo novamente antes de atualizá-lo.
     cache_valido = False
     if (hash_local and anterior.get("url") == url
             and anterior.get("sha256") == hash_local
@@ -221,7 +221,7 @@ def atualizar_ano(sessao: requests.Session, ano: int, url: str,
                     modificado = resposta.headers.get("Last-Modified")
             break
 
-        # Só promove Raw depois de validar o CSV e materializar seu intermediário.
+        # Só salvo o Raw definitivo depois de conferir o CSV e preparar o Parquet.
         alterado = novo_hash != hash_local
         novo_estado = {
             **anterior,
@@ -233,7 +233,7 @@ def atualizar_ano(sessao: requests.Session, ano: int, url: str,
                            else anterior.get("baixado_em")),
             "verificado_em": datetime.now(timezone.utc).isoformat(),
         }
-        # O estado só confirma um ano depois de ambos os arquivos estarem prontos.
+        # Marco o ano como concluído apenas quando os dois arquivos estiverem prontos.
         atualizado = {**estado, str(ano): novo_estado}
         backup_processed = None
         havia_processed = processed.exists()
