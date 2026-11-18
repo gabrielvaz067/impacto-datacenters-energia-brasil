@@ -37,7 +37,7 @@ def carregar_dados():
 def criar_silver(df, destino=None):
     df = df.copy()
 
-    # Padronizar campos
+    # Deixo os nomes consistentes antes de fazer os cálculos.
     df = df.rename(columns={
         "din_instante": "data",
         "val_cargaenergiamwmed": "carga_mwmed"
@@ -85,11 +85,11 @@ def criar_silver(df, destino=None):
     if len(por_dia) != len(calendario):
         raise ValueError("Calendário de carga tem datas internas ausentes.")
 
-    # Campos derivados
+    # Preparo os campos usados na análise mensal.
     df["ano"] = df["data"].dt.year
     df["mes"] = df["data"].dt.month
 
-    # Carga média diária em MW × 24 horas
+    # Converto a carga média diária em energia para cada dia.
     df["energia_mwh"] = df["carga_mwmed"] * 24
 
     df = df.sort_values(chave).reset_index(drop=True)
@@ -106,7 +106,7 @@ def criar_silver(df, destino=None):
 
 
 def criar_gold(df, destino=None):
-    # Agregação mensal por subsistema
+    # Somo a energia por mês e subsistema.
     mensal = (
         df.groupby(
             ["ano", "mes", "id_subsistema",
@@ -124,7 +124,7 @@ def criar_gold(df, destino=None):
         mensal["energia_mwh"] / 1000
     )
 
-    # Identificar meses completos
+    # Marco os meses incompletos para não compará-los com meses fechados.
     mensal["dias_no_mes"] = pd.to_datetime(
         dict(
             year=mensal["ano"],
