@@ -20,7 +20,7 @@ except ModuleNotFoundError:
 
 
 
-# 1. CONFIGURAÇÕES
+# Configuração da consulta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 RAW_DIR = BASE_DIR / "data/raw/ons/geracao"
@@ -36,7 +36,7 @@ CHUNK_SIZE = 1024 * 1024
 TIMEOUT = (15, 180)
 
 
-# 2. CONTROLE DE ESTADO
+# Registro dos arquivos já consultados
 def carregar_estado():
     if STATE_FILE.exists():
         return json.loads(
@@ -60,7 +60,7 @@ def salvar_estado(estado):
     destino_temp.replace(STATE_FILE)
 
 
-# 3. DESCOBERTA DINÂMICA
+# Busca dos recursos disponíveis no catálogo
 @repetir_transitorios
 def consultar_recursos():
 
@@ -158,7 +158,7 @@ def selecionar_recursos(recursos, inicio=None, fim=None, recentes=None):
     return [por_mes[chave] for chave in esperadas]
 
 
-# 4. VERIFICAÇÃO E DOWNLOAD
+# Conferência e download
 @repetir_transitorios
 def baixar_recurso(recurso, estado):
     proteger_area_operacional(RAW_DIR)
@@ -226,7 +226,7 @@ def baixar_recurso(recurso, estado):
             temporario.unlink(missing_ok=True)
 
 
-# 5. EXECUÇÃO PRINCIPAL
+# Execução da extração
 def main():
 
     global RAW_DIR, STATE_FILE
