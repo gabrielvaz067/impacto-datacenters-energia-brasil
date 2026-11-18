@@ -1,4 +1,4 @@
-"""Preserva, verifica, transporta e reproduz edições sem consultar fontes correntes."""
+"""Guarda e recupera edições do estudo usando os arquivos preservados localmente."""
 
 import argparse
 import json
@@ -31,7 +31,7 @@ def registrar(arquivo, caminho, fonte, dataset, recurso, referencia, controle=No
         "situacao_aquisicao": "registrada" if controle.get("baixado_em") else "nao_registrada",
         "caminho": caminho, "tamanho_bytes": arquivo.stat().st_size,
         "sha256": snapshots.sha256(arquivo),
-        # Observações do controle local, NÃO uma consulta atual à fonte.
+        # Estes dados vêm do controle local e não de uma nova consulta à fonte.
         "metadados_origem_registrados": controle,
     }
     if controle.get("sha256") and controle["sha256"] != item["sha256"]:
@@ -107,7 +107,7 @@ def preservar(edicao, origem, armazenamento, destino, configuracao=None, projeto
     origem, projeto = Path(origem).resolve(), Path(projeto).resolve()
     itens, config = inventariar_dados(origem, configuracao)
     arquivos = {a["caminho"]: origem / a["caminho"] for a in itens}
-    # Preserva também o código para que uma mudança futura não altere a edição.
+    # Guardo o código da edição para que atualizações futuras não mudem seu resultado.
     for padrao in ("src/*.py", "notebooks/*.ipynb", "sql/*.sql", "requirements.txt"):
         for arquivo in sorted(projeto.glob(padrao)):
             relativo = arquivo.relative_to(projeto).as_posix()
@@ -123,7 +123,7 @@ def preservar(edicao, origem, armazenamento, destino, configuracao=None, projeto
     }
     snapshots.validar_manifesto(manifesto)
     if Path(destino).exists():
-        # Confere conflito antes de inserir qualquer objeto novo.
+        # Verifico possíveis conflitos antes de salvar novos arquivos.
         anterior = snapshots.ler_manifesto(destino)
         if {**manifesto, "preservado_em": anterior["preservado_em"]} != anterior:
             raise FileExistsError("Edição já preservada. Use um novo identificador para a revisão.")
@@ -159,13 +159,13 @@ def reproduzir(manifesto_path, armazenamento, destino, executar=True):
                                     snapshots.caminho_seguro(destino, item["caminho"]))
     conferir_area(manifesto, destino)
     if executar:
-        # Usa o executável/código preservado, não o código de uma edição futura.
+        # Executo o código guardado com a edição, não a versão atual do projeto.
         subprocess.run([sys.executable, "-B", "src/edicoes.py", "transformar"], cwd=destino, check=True)
     return manifesto
 
 
 def transformar():
-    """Executado dentro da reprodução; offline e sem recriar a curadoria EPE."""
+    """Reexecuta a edição localmente, sem acesso à rede nem nova curadoria da EPE."""
     raiz = BASE_DIR
     manifesto = snapshots.ler_manifesto(raiz / snapshots.MANIFESTO_LOCAL)
     conferir_area(manifesto, raiz)
