@@ -1,4 +1,4 @@
-"""Valida insumos operacionais e publica um arquivo com recuperação local."""
+"""Confere os arquivos recebidos e permite recuperar uma gravação interrompida."""
 
 import csv
 from datetime import datetime
@@ -94,7 +94,7 @@ def validar_csv_aneel(caminho):
                 quantidade += 1
             if not quantidade:
                 raise ValueError("CSV ANEEL sem empreendimentos.")
-        # Uma linha cortada no fim pode manter o número de delimitadores.
+        # Uma linha incompleta pode ter a quantidade esperada de separadores.
         with Path(caminho).open("rb") as arquivo:
             arquivo.seek(-1, 2)
             if arquivo.read(1) not in (b"\n", b"\r"):
@@ -121,7 +121,7 @@ def cache_valido(caminho, info, validar, exigir_hash=True):
 
 
 def publicar(temporario, destino, salvar_controle, caminho_controle):
-    """Em falha de controle restaura bytes anteriores; após interrupção o hash força reconciliação."""
+    """Restaura o arquivo anterior se o controle falhar. Após interrupções, o hash permite conferir o conteúdo."""
     destino = Path(destino)
     anterior = None
     controle = Path(caminho_controle)
