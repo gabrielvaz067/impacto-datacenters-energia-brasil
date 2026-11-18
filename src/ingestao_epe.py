@@ -16,8 +16,8 @@ FONTE = (
     "publicacoes/plano-decenal-de-expansao-de-energia-2036"
 )
 
-# Curadoria manual dos valores apresentados no PDE 2036; não é extração automática do PDF.
-# Não são medições históricas do ONS.
+# Transcrevi estes indicadores do PDE 2036; o script não lê o PDF automaticamente.
+# Estes números são estimativas e projeções da EPE, não medições do ONS.
 dados = [
     {
         "ano": 2026,
@@ -77,10 +77,10 @@ df["url_documento_complementar"] = (
 )
 df["versao_documento_complementar"] = "arquivo v1_2026-10-27"
 df["pagina_impressa_complementar"] = df["indicador"].map({"data_centers": 36, "eletricidade_total": 11})
-# Data desta verificação, não a data desconhecida da consulta original.
+# Registro quando conferi as fontes, sem confundir essa data com a consulta original.
 df["data_verificacao_referencias"] = "2026-11-10"
 
-# Validações
+# Confiro os dados antes de salvar a referência.
 if df.duplicated(["ano", "indicador"]).any():
     raise ValueError("Indicadores duplicados.")
 
@@ -90,7 +90,7 @@ if df["valor_twh"].isna().any():
 if not df["valor_twh"].gt(0).all():
     raise ValueError("Valores inválidos.")
 
-# Salvar curadoria validada como execução concluída.
+# Salvo a referência validada para uso nos notebooks.
 with Publicacao(BASE_DIR, "epe") as publicacao:
     relativo = "data/reference/epe_pde2036.csv"
     temporario = publicacao.caminho(relativo)

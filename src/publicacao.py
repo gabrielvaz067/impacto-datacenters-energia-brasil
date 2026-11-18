@@ -1,4 +1,4 @@
-"""Publicação versionada por pipeline; leitores coerentes consultam o ponteiro."""
+"""Mantém versões dos resultados de cada pipeline para leituras consistentes."""
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -56,7 +56,7 @@ def _copiar_atomico(origem, destino):
 
 @contextmanager
 def _bloqueio(pasta):
-    """O SO libera o bloqueio quando o processo termina, inclusive por falha."""
+    """O sistema operacional libera o bloqueio ao encerrar o processo, mesmo se ele falhar."""
     pasta.mkdir(parents=True, exist_ok=True)
     with (pasta / "lock").open("a+b") as arquivo:
         arquivo.seek(0, os.SEEK_END)
@@ -96,7 +96,7 @@ def _relativo(caminho):
 
 
 class Publicacao:
-    """Uma publicação por domínio; arquivos fixos são projeções de compatibilidade."""
+    """Publica uma versão por domínio e mantém cópias nos caminhos antigos."""
 
     def __init__(self, raiz, dominio):
         if not dominio or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789_-" for c in dominio):
@@ -171,13 +171,13 @@ class Publicacao:
                     parquet.close()
             itens.append({"caminho": relativo.as_posix(), "bytes": caminho.stat().st_size,
                           "sha256": sha256(caminho)})
-        # Normaliza tuplas e demais contêineres antes de comparar com o JSON anterior.
+        # Padronizo os valores antes de compará-los com o JSON da versão anterior.
         qualidade = json.loads(json.dumps(qualidade or {}, ensure_ascii=False, allow_nan=False))
         manifesto = {"id": self.id, "concluida_em": datetime.now(timezone.utc).isoformat(),
                      "arquivos": itens, "qualidade": qualidade}
         _json_atomico(self.versao / "manifesto.json", manifesto)
-        # Não cria versões redundantes quando tanto os bytes versionados quanto os
-        # caminhos de compatibilidade ainda coincidem com a execução concluída.
+        # Evito criar outra versão quando os arquivos e as cópias de compatibilidade
+        # continuam iguais aos da última execução concluída.
         if self.ponteiro.exists():
             anterior = json.loads(self.ponteiro.read_text(encoding="utf-8"))
             manifest_path = self.pasta / "execucoes" / anterior["id"] / "manifesto.json"
@@ -209,7 +209,7 @@ class Publicacao:
 
 
 def ler_concluida(raiz, dominio):
-    """Fixa uma versão e verifica seus bytes antes de entregá-la ao consumidor."""
+    """Seleciona uma versão concluída e confere os arquivos antes da leitura."""
     pub = Publicacao(raiz, dominio)
     ponteiro = json.loads(pub.ponteiro.read_text(encoding="utf-8"))
     identificador = ponteiro["id"]

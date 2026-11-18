@@ -9,7 +9,7 @@ except ModuleNotFoundError:
     from src.publicacao import Publicacao
 
 
-# 1. CONFIGURAÇÕES
+# Configuração da transformação
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 RAW_DIR = BASE_DIR / "data/raw/ons/geracao"
@@ -45,7 +45,7 @@ CHAVE_REGISTRO = [
 
 
 
-# 2. SILVER
+# Preparação da camada Silver
 def criar_silver(arquivo, destino=None):
 
     print(f"\nProcessando {arquivo.name}...")
@@ -90,7 +90,7 @@ def criar_silver(arquivo, destino=None):
             "Investigue antes de deduplicar."
         )
 
-    # Competência
+    # Identifico o mês de referência.
     df["ano"] = df["din_instante"].dt.year
     df["mes"] = df["din_instante"].dt.month
     df["hora"] = df["din_instante"].dt.hour
@@ -111,7 +111,7 @@ def criar_silver(arquivo, destino=None):
     if not df["din_instante"].eq(df["din_instante"].dt.floor("h")).all():
         raise ValueError("Geração contém instantes fora da hora exata.")
 
-    # Classificação da modalidade
+    # Organizo os registros por modalidade.
     df["grupo_modalidade"] = "Demais modalidades"
 
     df.loc[
@@ -135,7 +135,7 @@ def criar_silver(arquivo, destino=None):
         "grupo_modalidade",
     ] = "Conjuntos de usinas"
 
-    # Indicadores de qualidade
+    # Registro informações para conferir a qualidade dos dados.
     df["geracao_ausente"] = (
         df["val_geracao"].isna()
     )
@@ -154,7 +154,7 @@ def criar_silver(arquivo, destino=None):
 
     df["arquivo_origem"] = arquivo.name
 
-    # Preserva o valor original, inclusive negativo
+    # Mantenho os valores como vieram da fonte, inclusive os negativos.
     destino = destino or (
         SILVER_DIR /
         f"geracao_{ano}_{mes:02d}.parquet"
@@ -188,7 +188,7 @@ def criar_silver(arquivo, destino=None):
     return df
 
 
-# 3. GOLD HORÁRIA
+# Agregação horária na camada Gold
 def criar_gold_horaria(df):
 
     dimensoes = [
@@ -232,7 +232,7 @@ def criar_gold_horaria(df):
     return gold
 
 
-# 4. GOLD DE QUALIDADE
+# Indicadores de qualidade na camada Gold
 def criar_gold_qualidade(df):
 
     dimensoes = [
@@ -268,7 +268,7 @@ def criar_gold_qualidade(df):
     return gold
 
 
-# 5. VALIDAÇÃO
+# Conferência das tabelas
 def validar_resultados(silver_list, horario, qualidade):
 
     total_raw = sum(len(df) if isinstance(df, pd.DataFrame) else df["registros"] for df in silver_list)
@@ -332,7 +332,7 @@ def validar_resultados(silver_list, horario, qualidade):
     print("\nValidação Silver x Gold: OK")
 
 
-# 6. GRAVAÇÃO DAS GOLDS
+# Gravação das tabelas Gold
 def salvar_parquet(df, destino):
 
     temporario = destino.with_suffix(".tmp")
@@ -346,9 +346,9 @@ def salvar_parquet(df, destino):
     temporario.replace(destino)
 
 
-# 7. EXECUÇÃO PRINCIPAL
+# Execução da transformação
 def diagnosticar_mes(df):
-    """Resume uma competencia sem reter a Silver detalhada."""
+    """Resume os dados do mês sem manter a tabela Silver detalhada em memória."""
     chave = f"{int(df['ano'].iloc[0]):04d}-{int(df['mes'].iloc[0]):02d}"
     horas = pd.DatetimeIndex(df["din_instante"].drop_duplicates().sort_values())
     esperadas_internas = pd.date_range(horas.min(), horas.max(), freq="h")
@@ -378,7 +378,7 @@ def diagnosticar_mes(df):
 
 
 def diagnosticar_periodo(silvers, inicio=None, fim=None):
-    """Aceita Silvers ou resumos mensais e compara seus universos."""
+    """Compara os conjuntos de registros das tabelas Silver ou dos resumos mensais."""
     por_mes = {}
     entidades = {}
     for item in silvers:
