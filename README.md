@@ -10,7 +10,7 @@ A ideia não é prever se faltará energia, mas **colocar os números em perspec
 
 ## O principal resultado
 
-No cenário de referência da Empresa de Pesquisa Energética (EPE), o consumo anual dos data centers de grande porte considerados no estudo passa de **3 TWh em 2026 para 30 TWh em 2036**. São **27 TWh adicionais por ano**, um crescimento de **900%**.
+Segundo as estimativas e projeções da Empresa de Pesquisa Energética (EPE), o consumo anual de eletricidade dos data centers de grande porte considerados no estudo deve passar de **3 TWh em 2026 para 30 TWh em 2036**. Isso significa que, ao final desse período de dez anos, o consumo anual projetado será **27 TWh maior**, representando um crescimento acumulado de **900%**.
 
 Em 2036, esses 30 TWh representariam **3,06%** do consumo total de eletricidade projetado pela EPE. Olhando somente para o *aumento* previsto no consumo brasileiro entre 2026 e 2036, o acréscimo associado aos data centers equivale a **9,75%** desse crescimento.
 
