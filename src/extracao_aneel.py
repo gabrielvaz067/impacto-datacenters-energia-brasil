@@ -16,9 +16,7 @@ except ModuleNotFoundError:
     from src.integridade_ingestao import validar_csv_aneel, cache_valido, publicar, sha256
     from src.rede import repetir_transitorios
 
-# =========================================
-# CONFIGURAÇÕES
-# =========================================
+# Endereços e caminhos usados na extração
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 RAW_DIR = BASE_DIR / "data" / "raw" / "aneel"
@@ -34,9 +32,7 @@ DATASET = "siga-sistema-de-informacoes-de-geracao-da-aneel"
 ARQUIVO = RAW_DIR / "siga_empreendimentos_diario.csv"
 
 
-# =========================================
-# CONSULTAR CATÁLOGO
-# =========================================
+# Consulta ao catálogo da ANEEL
 
 def consultar_recurso():
     resposta = requests.get(
@@ -66,9 +62,7 @@ def consultar_recurso():
     raise RuntimeError("CSV diário não encontrado")
 
 
-# =========================================
-# CONTROLE DE VERSÃO
-# =========================================
+# Controle da versão baixada
 
 def carregar_estado():
     if STATE_FILE.exists():
@@ -89,9 +83,7 @@ def salvar_estado(estado):
     temp.replace(STATE_FILE)
 
 
-# =========================================
-# EXTRAÇÃO
-# =========================================
+# Download e conferência do arquivo
 
 @repetir_transitorios
 def atualizar():
