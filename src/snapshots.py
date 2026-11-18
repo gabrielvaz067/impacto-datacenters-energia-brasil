@@ -1,4 +1,4 @@
-"""Armazenamento local por SHA-256. Sem rede, links físicos ou sobrescrita."""
+"""Guarda cópias locais identificadas por SHA-256, sem rede e sem sobrescrever arquivos."""
 
 from datetime import datetime, timezone
 import hashlib
@@ -35,7 +35,7 @@ def caminho_seguro(raiz, relativo):
 
 
 def proteger_area_operacional(pasta):
-    """Extratores não podem atualizar o repositório de objetos nem uma reprodução."""
+    """Impede que uma extração altere cópias históricas ou pastas de reprodução."""
     pasta = Path(pasta).resolve()
     for pai in (pasta, *pasta.parents):
         if (pai / MARCADOR).exists() or (pai / MANIFESTO_LOCAL).exists():
@@ -111,7 +111,7 @@ def guardar(arquivo, armazenamento, item):
     if destino.exists():
         conferir(destino, item)
     else:
-        # Cópia independente: alterar o Raw nunca altera o objeto preservado.
+        # A cópia preservada fica separada do Raw, que pode mudar em novas extrações.
         with Path(arquivo).open("rb") as entrada, destino.open("xb") as saida:
             shutil.copyfileobj(entrada, saida)
         conferir(destino, item)
@@ -128,7 +128,7 @@ def publicar_manifesto(manifesto, destino):
     destino = Path(destino)
     if destino.exists():
         anterior = ler_manifesto(destino)
-        # A data de preservação permanece sendo a da primeira execução.
+        # Mantenho a data da primeira preservação do arquivo.
         proposto = {**manifesto, "preservado_em": anterior["preservado_em"]}
         if anterior != proposto:
             raise FileExistsError("Edição já preservada com outro conteúdo/metadado. Use um novo identificador.")
@@ -150,7 +150,7 @@ def exportar(manifesto_path, armazenamento, pacote):
 
 
 def importar(manifesto_path, armazenamento, pacote):
-    """O manifesto confiável é fornecido separadamente; nunca extrai caminhos do ZIP."""
+    """Usa um manifesto fornecido à parte, sem confiar nos caminhos internos do ZIP."""
     manifesto = ler_manifesto(manifesto_path)
     import tempfile
 
@@ -160,7 +160,7 @@ def importar(manifesto_path, armazenamento, pacote):
             raise ValueError("Pacote com entradas duplicadas.")
         if arquivo.read("manifesto.json") != Path(manifesto_path).read_bytes():
             raise ValueError("Manifesto do pacote difere do manifesto fornecido.")
-        # Primeiro valida o pacote inteiro; depois insere objetos novos.
+        # Confiro todo o pacote antes de incorporar os arquivos.
         unicos = {a["sha256"]: a for a in manifesto["arquivos"]}
         for digest, item in unicos.items():
             nome = f"sha256/{digest}"
