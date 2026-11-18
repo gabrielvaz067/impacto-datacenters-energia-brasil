@@ -1,4 +1,4 @@
-"""Tentativas limitadas para falhas transitórias das extrações HTTP."""
+"""Controla novas tentativas quando uma consulta HTTP falha temporariamente."""
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -14,7 +14,7 @@ STATUS_TRANSITORIOS = {429, 500, 502, 503, 504}
 
 
 def espera_retry_after(valor, agora=None):
-    """Retorna segundos solicitados pelo servidor ou None para cabeçalho inválido."""
+    """Lê o tempo de espera informado pelo servidor, quando o cabeçalho é válido."""
     if not valor:
         return None
     valor = str(valor).strip()
@@ -31,7 +31,7 @@ def espera_retry_after(valor, agora=None):
 
 
 def repetir_transitorios(funcao):
-    """Repete a operação inteira, inclusive um download interrompido.
+    """Tenta novamente toda a operação quando ocorre uma falha temporária.
 
     A operação envolvida deve descartar temporários e não publicar dados antes
     de completar a transferência. Erros de certificado TLS não são repetidos.
@@ -53,7 +53,7 @@ def repetir_transitorios(funcao):
                     raise
                 solicitado = espera_retry_after(resposta.headers.get("Retry-After")) if resposta is not None else None
                 if solicitado is not None and solicitado > ESPERA_MAXIMA:
-                    # Não repetir antes do prazo solicitado pelo servidor.
+                    # Respeito o intervalo indicado pelo servidor antes de tentar de novo.
                     raise
                 espera = max(min(BACKOFF_INICIAL * 2**tentativa, ESPERA_MAXIMA), solicitado or 0)
                 if resposta is not None and resposta.raw is not None:
