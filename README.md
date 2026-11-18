@@ -6,7 +6,7 @@ O crescimento da inteligência artificial e dos serviços digitais também traz 
 
 Neste projeto, analisei dados públicos para entender três pontos: como a carga elétrica brasileira evoluiu, qual é a dimensão da infraestrutura de geração cadastrada e o que as projeções indicam para o consumo dos data centers até 2036.
 
-A ideia não é prever se faltará energia, mas **colocar os números em perspectiva** e identificar o que eles ajudam — e o que não ajudam — a responder.
+A ideia não é prever se faltará energia, mas **colocar os números em perspectiva** e identificar quais perguntas os dados conseguem responder e quais continuam em aberto.
 
 ## O principal resultado
 
@@ -24,10 +24,10 @@ Cruzei três fontes que respondem a perguntas diferentes:
 
 | Fonte | O que procurei entender |
 | --- | --- |
-| [ONS — carga diária](https://dados.ons.org.br/dataset/carga-energia) | Como a carga do Sistema Interligado Nacional (SIN) evoluiu ao longo do tempo |
-| [ONS — geração por usina](https://dados.ons.org.br/dataset/geracao-usina-2) | Como se comportaram, em um recorte horário, as fontes hidrelétrica, térmica, eólica e solar |
-| [ANEEL — SIGA](https://dadosabertos.aneel.gov.br/dataset/siga-sistema-de-informacoes-de-geracao-da-aneel) | Qual a potência fiscalizada em operação e a capacidade outorgada em projetos |
-| [EPE — PDE 2036](https://epe.gov.br/pt/publicacoes-dados-abertos/publicacoes/plano-decenal-de-expansao-de-energia-2036) | Qual o consumo de eletricidade projetado, inclusive para grandes cargas e data centers |
+| [ONS: carga diária](https://dados.ons.org.br/dataset/carga-energia) | Como a carga do Sistema Interligado Nacional (SIN) evoluiu ao longo do tempo |
+| [ONS: geração por usina](https://dados.ons.org.br/dataset/geracao-usina-2) | Como se comportaram, em um recorte horário, as fontes hidrelétrica, térmica, eólica e solar |
+| [ANEEL: SIGA](https://dadosabertos.aneel.gov.br/dataset/siga-sistema-de-informacoes-de-geracao-da-aneel) | Qual a potência fiscalizada em operação e a capacidade outorgada em projetos |
+| [EPE: PDE 2036](https://epe.gov.br/pt/publicacoes-dados-abertos/publicacoes/plano-decenal-de-expansao-de-energia-2036) | Qual o consumo de eletricidade projetado, inclusive para grandes cargas e data centers |
 
 Para organizar a análise, preparei um fluxo de extração e tratamento com **Python, Pandas e arquivos Parquet**, separando dados originais, tratados e agregados. Usei **DuckDB e SQL** nas consultas, além de **Jupyter e Matplotlib** para explorar os resultados e produzir os gráficos.
 
